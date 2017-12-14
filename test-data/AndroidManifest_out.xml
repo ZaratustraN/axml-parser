@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="1" android:versionName="1.0" package="cn.zarathustra.net" >
+<uses-sdk android:minSdkVersion="14" android:targetSdkVersion="21" >
+</uses-sdk>
+<uses-permission android:name="android.permission.INTERNET" >
+</uses-permission>
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" >
+</uses-permission>
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" >
+</uses-permission>
+<application android:theme="@2131492869" android:label="@2131427359" android:icon="@2131361792" android:allowBackup="true" android:supportsRtl="true" android:roundIcon="@2131361793" >
+<activity android:name="cn.zarathustra.net.MainActivity" >
+<intent-filter >
+<action android:name="android.intent.action.MAIN" >
+</action>
+<category android:name="android.intent.category.LAUNCHER" >
+</category>
+</intent-filter>
+</activity>
+<meta-data android:name="android.support.VERSION" android:value="26.1.0" >
+</meta-data>
+<meta-data android:name="android.arch.lifecycle.VERSION" android:value="27.0.0-SNAPSHOT" >
+</meta-data>
+</application>
+</manifest>
