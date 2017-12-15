@@ -39,7 +39,7 @@ public class StartNamespaceChunk extends Chunk {
 
     @Override
     public String genXML() {
-        return "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>\n";
+        return "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"" + (mValuePool.isUTF8() ? "no" : "yes") + "\"?>\n";
     }
 
     public String toString() {

@@ -393,7 +393,12 @@ public class TypedValue {
     private static boolean isDimension(String valueString) {
         for (int i = 0; i < DIMENSION_UNIT_STRS.length; i++) {
             if (valueString.endsWith(DIMENSION_UNIT_STRS[i])) {
-                return true;
+                try {
+                    Integer.parseInt(valueString.substring(0, valueString.length() - DIMENSION_UNIT_STRS[i].length()));
+                    return true;
+                } catch (Exception e) {
+                    continue;
+                }
             }
         }
         return false;

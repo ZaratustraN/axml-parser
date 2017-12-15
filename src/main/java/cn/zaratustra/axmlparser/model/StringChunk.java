@@ -24,8 +24,9 @@ public class StringChunk extends Chunk {
     private int mStringOffsets[];
     private int mStyleOffsets[];
 
-    public StringChunk(){
-        mUnknown = 0x00000000;
+    public StringChunk() {
+//        mUnknown = 0x00000000;
+//        mUnknown = UTF8_FLAG;
     }
 
     @Override
@@ -59,9 +60,11 @@ public class StringChunk extends Chunk {
 
             int strLength;
             if (mUnknown == UTF8_FLAG) {
+                valuePool.setUTF8(true);
                 strLength = byteBuffer.get();
                 byteBuffer.get();
             } else {
+                valuePool.setUTF8(false);
                 strLength = byteBuffer.getShort() * 2;
             }
 
@@ -87,10 +90,25 @@ public class StringChunk extends Chunk {
         }
         for (int i = 0; i < mValuePool.getStringSize(); i++) {
             String value = mValuePool.getString(i);
-            byteBuffer.putShort((short) value.length());
-            byte[] bytes = addZero(value.getBytes(Charset.forName("utf-8")));
-            byteBuffer.put(bytes, 0, bytes.length);
-            byteBuffer.putChar('\0');
+
+            if (mValuePool.isUTF8()) {
+                byteBuffer.put((byte) value.length());
+                byteBuffer.put((byte) value.length());
+                byte[] bytes = value.getBytes(Charset.forName("utf-8"));
+                byteBuffer.put(bytes, 0, bytes.length);
+                byteBuffer.put(new byte[]{0x00});
+                if (i == mValuePool.getStringSize() - 1 && byteBuffer.position() < mChunkSize) {
+                    byteBuffer.put(new byte[0x00]);
+                }
+            } else {
+                byteBuffer.putShort((short) value.length());
+                byte[] bytes = addZero(value.getBytes(Charset.forName("utf-8")));
+                byteBuffer.put(bytes, 0, bytes.length);
+                byteBuffer.putChar('\0');
+                if (i == mValuePool.getStringSize() - 1 && byteBuffer.position() < mChunkSize) {
+                    byteBuffer.putChar('\0');
+                }
+            }
         }
 
         return byteBuffer.array();

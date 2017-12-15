@@ -55,6 +55,21 @@ public class ResourceChunk extends Chunk {
 //        mValuePool.getResourceIds().add(Integer.decode("0x101052c"));
 //        mValuePool.getResourceIds().add(Integer.decode("0x10103af"));
 //        mValuePool.getResourceIds().add(Integer.decode("0x1010000"));
+
+
+//        mValuePool.getResourceIds().clear();
+//        mValuePool.getResourceIds().add(Integer.decode("0x1010000"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x1010001"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x1010002"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x1010003"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x1010024"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x101020c"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x101021b"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x101021c"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x1010270"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x1010280"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x10103af"));
+//        mValuePool.getResourceIds().add(Integer.decode("0x101052c"));
         for (int i = 0; i < mValuePool.getResourceIdSize(); i++) {
             byteBuffer.putInt(mValuePool.getResourceId(i));
         }

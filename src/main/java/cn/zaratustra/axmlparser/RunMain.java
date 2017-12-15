@@ -17,7 +17,7 @@ public class RunMain {
                 "", "x2a", "./test-data/AndroidManifest_out.xml", "./test-data/AndroidManifest.xml"
         };
 
-//        Run(args1);
+        Run(args1);
         Run(args2);
     }
 

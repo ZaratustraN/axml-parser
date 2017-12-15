@@ -15,7 +15,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -66,18 +65,18 @@ public class XMLParser {
         try {
             ValuePool valuePool = new ValuePool();
             initValuePullString(inputFile, valuePool);
-
             XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
             XmlPullParser pullParser = pullParserFactory.newPullParser();
             pullParser.setInput(new FileInputStream(new File(inputFile)), "utf-8");
             int event = pullParser.getEventType();
 
-            int lineIndex = 1;
+            int lineIndex = 2;
             valuePool.putUriToNamespace("http://schemas.android.com/apk/res/android", "android");
             valuePool.putNamespaceToUri("http://schemas.android.com/apk/res/android", "android");
             StartNamespaceChunk startNamespaceChunk = new StartNamespaceChunk();
             startNamespaceChunk.setChunkType(StartNamespaceChunk.CHUNK_TYPE);
             startNamespaceChunk.setLineNumber(lineIndex++);
+            valuePool.putInteger(startNamespaceChunk.getLineNumber());
             startNamespaceChunk.setPrefix(valuePool.checkAndAddString("android"));
             startNamespaceChunk.setUri(valuePool.checkAndAddString("http://schemas.android.com/apk/res/android"));
             startNamespaceChunk.setValuePool(valuePool);
@@ -94,14 +93,24 @@ public class XMLParser {
                         lineIndex = parseEndTagChunk(pullParser, lineIndex, valuePool);
                         break;
                 }
-                event = pullParser.next();
+                try {
+                    event = pullParser.next();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             addStringChunkAndResourceChunk(valuePool);
 
             EndNamespaceChunk endNamespaceChunk = new EndNamespaceChunk();
             endNamespaceChunk.setChunkType(EndNamespaceChunk.CHUNK_TYPE);
-            endNamespaceChunk.setLineNumber(lineIndex++);
+
+            if (valuePool.isUTF8()) {
+                endNamespaceChunk.setLineNumber(valuePool.pullInteger());
+            } else {
+                endNamespaceChunk.setLineNumber(lineIndex++);
+            }
+
             endNamespaceChunk.setPrefix(valuePool.checkAndAddString("android"));
             endNamespaceChunk.setUri(valuePool.checkAndAddString("http://schemas.android.com/apk/res/android"));
             endNamespaceChunk.setValuePool(valuePool);
@@ -141,6 +150,9 @@ public class XMLParser {
     }
 
     private void initValuePullString(String inputFile, ValuePool valuePool) throws Exception {
+
+        valuePool.setUTF8(readFile(new File(inputFile), "utf-8").contains("standalone=\"no\""));
+
         XmlPullParserFactory pullParserFactory = XmlPullParserFactory.newInstance();
         XmlPullParser pullParser = pullParserFactory.newPullParser();
         pullParser.setInput(new FileInputStream(new File(inputFile)), "utf-8");
@@ -160,14 +172,17 @@ public class XMLParser {
                             if (splitStr[0].equals("android") && !valuePool.getResourceIds().contains(mPublicNameToResId.get(splitStr[1]))) {
                                 valuePool.addResourceId(mPublicNameToResId.get(splitStr[1]));
                             }
-                            System.out.println("Get Namespace :" + splitStr[1] + ", " + Integer.toHexString(mPublicNameToResId.get(splitStr[1])));
                         }
                     }
                     break;
                 case XmlPullParser.END_TAG:
                     break;
             }
-            event = pullParser.next();
+            try {
+                event = pullParser.next();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -179,6 +194,7 @@ public class XMLParser {
         mChunkList.add(0, resourceChunk);
 
         StringChunk stringChunk = new StringChunk();
+        stringChunk.setUnknown(valuePool.isUTF8() ? 256 : 0x00000000);
         stringChunk.setValuePool(valuePool);
         stringChunk.setChunkType(StringChunk.CHUNK_TYPE);
         stringChunk.setStringCount(valuePool.getStringSize());
@@ -191,16 +207,31 @@ public class XMLParser {
         int index = 0;
         for (int i = 0; i < valuePool.getStringSize(); i++) {
             stringOffsets[i] = index;
-            index += (valuePool.getString(i).length() * 2 + 4);
+            if (valuePool.isUTF8()) {
+                index += (valuePool.getString(i).length() + 3);
+            } else {
+                index += (valuePool.getString(i).length() * 2 + 4);
+            }
         }
         stringChunk.setStringOffsets(stringOffsets);
-        stringChunk.setChunkSize(index + stringChunk.getStringCount() * 4 + 7 * 4);
+        if (valuePool.isUTF8()) {
+            int size = index + stringChunk.getStringCount() * 4 + 7 * 4;
+            if (size % 2 != 0) {
+                size += 1;
+            }
+            stringChunk.setChunkSize(size);
+        } else {
+            int size = index + stringChunk.getStringCount() * 4 + 7 * 4;
+            if (size % 4 != 0) {
+                size += 2;
+            }
+            stringChunk.setChunkSize(size);
+        }
         mChunkList.add(0, stringChunk);
     }
 
     private int parseEndTagChunk(XmlPullParser pullParser, int lineIndex, ValuePool valuePool) {
         int chunkType = EndTagChunk.CHUNK_TYPE;
-        int lineNumber = lineIndex++;
         int nameSpaceUri = valuePool.getUri(pullParser.getNamespace());
         int name = valuePool.checkAndAddString(pullParser.getName());
         int chunkSize = 6 * 4;
@@ -209,7 +240,13 @@ public class XMLParser {
         endTagChunk.setChunkType(EndTagChunk.CHUNK_TYPE);
         endTagChunk.setValuePool(valuePool);
         endTagChunk.setChunkType(chunkType);
-        endTagChunk.setLineNumber(lineNumber);
+
+        if (valuePool.isUTF8()) {
+            endTagChunk.setLineNumber(valuePool.pullInteger());
+        } else {
+            int lineNumber = lineIndex++;
+            endTagChunk.setLineNumber(lineNumber);
+        }
         endTagChunk.setName(name);
         endTagChunk.setNamespaceUri(nameSpaceUri);
         endTagChunk.setChunkSize(chunkSize);
@@ -282,6 +319,7 @@ public class XMLParser {
         startTagChunk.setName(tagName);
         startTagChunk.setNamespaceUri(nameSpaceUri);
         startTagChunk.setLineNumber(lineNumber);
+        valuePool.putInteger(lineNumber);
         startTagChunk.setFlags(flags);
         startTagChunk.setAttributeCount(attributeCount);
         startTagChunk.setClassAttribute(classAttribute);
@@ -301,4 +339,40 @@ public class XMLParser {
             fileOutputStream.write(buffer, 0, length);
         }
     }
+
+    public static String readFile(File file, String charset) {
+        if (file == null || !file.exists()) {
+            return "";
+        }
+
+        StringWriter sw = new StringWriter();
+        InputStreamReader isr = null;
+        try {
+            isr = new InputStreamReader(new FileInputStream(file), charset == null ? "utf-8" : charset);
+            char[] buf = new char[1024];
+            int len;
+            while ((len = isr.read(buf)) != -1) {
+                sw.write(buf, 0, len);
+            }
+
+            return sw.toString();
+
+        } catch (Exception err) {
+            err.printStackTrace();
+        } finally {
+            try {
+                isr.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                sw.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return "";
+    }
+
 }
